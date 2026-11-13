@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+bin/
+obj/
+dist_prod/
+
+# IDE / OS
+.idea/
+.vscode/
+.vs/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# Environment / secrets (connection string จริงห้าม commit)
+.env
+.env.*
+.deploy.env
+API/**/appsettings.Local.json
+
+# Logs
+*.log
+logs/
+
+# Claude Code memory (local only)
+.claude/
