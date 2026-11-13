@@ -1,9 +1,10 @@
 // File: Client/src/modules/designer/utils/qrRenderer.js
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: จุดเดียวที่เรียก qr-code-styling — render QR แล้วประกอบข้อความ (textOptions) เหนือ/ใต้ QR
 //              ใช้ทั้งภาพตัวอย่าง, ดาวน์โหลด, คัดลอก และภาพย่อ — ถ้าเปลี่ยนไลบรารีวาด QR แก้ที่ไฟล์นี้ไฟล์เดียว
 import QRCodeStyling from 'qr-code-styling'
 import { PREVIEW_SIZE, toStylingOptions } from './qrStyle.js'
+import { applyLogoShape } from './logoImage.js'
 
 const FONT_FAMILY = '"Noto Sans Thai", "Sarabun", sans-serif'
 const LINE_HEIGHT = 1.35
@@ -127,9 +128,15 @@ const renderSvg = async (style, content, size) => {
   return new Blob([svg], { type: MIME_TYPES.svg })
 }
 
+// แทน style.image ด้วยโลโก้ที่ตัดตามรูปทรงแล้ว (style ที่เก็บยังเป็นภาพต้นฉบับ)
+const withShapedLogo = async (style) =>
+  style.image ? { ...style, image: await applyLogoShape(style.image, style.imageOptions?.shape) } : style
+
 // คืน Blob ของภาพ QR (+ ข้อความ) ตามนามสกุลที่ขอ
-export const renderQrBlob = (style, content, { size = PREVIEW_SIZE, extension = 'png' } = {}) =>
-  extension === 'svg' ? renderSvg(style, content, size) : renderRaster(style, content, size, extension)
+export const renderQrBlob = async (style, content, { size = PREVIEW_SIZE, extension = 'png' } = {}) => {
+  const renderStyle = await withShapedLogo(style)
+  return extension === 'svg' ? renderSvg(renderStyle, content, size) : renderRaster(renderStyle, content, size, extension)
+}
 
 export const downloadQr = async (style, content, { size, extension, fileName }) => {
   const blob = await renderQrBlob(style, content, { size, extension })

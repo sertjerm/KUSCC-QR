@@ -78,7 +78,7 @@ Client/src/
     components/ QrPreview, ContentForm, StylePanel, ExportPanel
     utils/qrContent.js             — data → content ตาม qrType (vCard, Wi-Fi escape ฯลฯ)
     utils/qrStyle.js               — DEFAULT_STYLE, toStylingOptions, contrast warning
-    utils/logoImage.js             — ย่อ/บีบอัดโลโก้อัตโนมัติก่อนใส่ใน style
+    utils/logoImage.js             — ย่อ/บีบอัดโลโก้อัตโนมัติ + ตัดรูปทรง (มุมมน/วงกลม) ตอน render
     utils/qrRenderer.js            — จุดเดียวที่เรียก qr-code-styling + วาดข้อความ (preview/export/copy/thumbnail)
   modules/library/pages/MyQrPage.jsx — /my-qr
 ```

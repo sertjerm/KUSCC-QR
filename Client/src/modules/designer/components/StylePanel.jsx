@@ -1,5 +1,5 @@
 // File: Client/src/modules/designer/components/StylePanel.jsx
-// Version: 1.2.0
+// Version: 1.3.0
 // Description: แผงตกแต่ง QR — Brand preset, ข้อความเหนือ/ใต้ QR, รูปทรง/สีจุด (รองรับไล่สี), มุม, พื้นหลัง, โลโก้ และค่าขั้นสูง
 import { App, Button, Col, Collapse, ColorPicker, Empty, Form, Input, Row, Select, Slider, Switch, Upload } from 'antd'
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons'
@@ -235,6 +235,15 @@ const StylePanel = ({ style, lookups, presets, onChange, onApplyPreset }) => {
           </Col>
           {style.image && (
             <>
+              <Col xs={24} md={12}>
+                <Form.Item label="รูปทรงโลโก้" extra={style.imageOptions?.shape && style.imageOptions.shape !== 'square' ? 'ตัดกลางภาพให้เป็นจัตุรัสก่อน' : undefined}>
+                  <Select
+                    value={style.imageOptions?.shape || 'square'}
+                    options={toOptions(lookups?.logoShapes)}
+                    onChange={(shape) => set('imageOptions', { shape })}
+                  />
+                </Form.Item>
+              </Col>
               <Col xs={24} md={12}>
                 <Form.Item label="ขนาดโลโก้">
                   <Slider min={0.1} max={0.5} step={0.05} value={style.imageOptions?.imageSize} onChange={(imageSize) => set('imageOptions', { imageSize })} />

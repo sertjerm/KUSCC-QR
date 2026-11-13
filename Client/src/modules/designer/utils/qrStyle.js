@@ -1,5 +1,5 @@
 // File: Client/src/modules/designer/utils/qrStyle.js
-// Version: 1.2.0
+// Version: 1.3.0
 // Description: ค่า style เริ่มต้น (รูปแบบ options ของ qr-code-styling), แปลงเป็น options สำหรับ render/export,
 //              ตรวจ contrast สี (การเตรียมโลโก้อยู่ที่ logoImage.js)
 
@@ -12,17 +12,23 @@ export const DEFAULT_STYLE = {
   cornersDotOptions: { type: 'dot', color: '#064e3b' },
   backgroundOptions: { color: '#ffffff' },
   image: null,
-  imageOptions: { imageSize: 0.35, margin: 6, hideBackgroundDots: true, crossOrigin: 'anonymous' },
+  // shape (square | rounded | circle) เป็นของแอปเรา — qrRenderer ตัดภาพก่อนส่งให้ไลบรารี
+  imageOptions: { imageSize: 0.35, margin: 6, hideBackgroundDots: true, crossOrigin: 'anonymous', shape: 'square' },
   // ข้อความเหนือ/ใต้ QR — ไม่ใช่ option ของ qr-code-styling, qrRenderer.js เป็นผู้วาด (fontSize เทียบภาพ 600px)
   textOptions: { text: '', position: 'bottom', color: '#064e3b', fontSize: 36, bold: true },
 }
 
 export const PREVIEW_SIZE = 600
 
-// รวม style + content + ขนาด เป็น options ที่ส่งให้ QRCodeStyling (ตัด textOptions ออก)
+// ตัด field ที่เป็นของแอปเราออกก่อนส่งให้ไลบรารี
+// eslint-disable-next-line no-unused-vars
+const stripAppOptions = ({ shape, ...imageOptions } = {}) => imageOptions
+
+// รวม style + content + ขนาด เป็น options ที่ส่งให้ QRCodeStyling (ตัด textOptions / imageOptions.shape ออก)
 // eslint-disable-next-line no-unused-vars
 export const toStylingOptions = ({ textOptions, ...style }, content, size = PREVIEW_SIZE, type = 'canvas') => ({
   ...style,
+  imageOptions: stripAppOptions(style.imageOptions),
   type,
   width: size,
   height: size,

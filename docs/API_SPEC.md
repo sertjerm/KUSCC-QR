@@ -84,7 +84,8 @@ Client (`src/utils/apiClient.js`) แกะ `data` ออกให้แล้�
     "errorCorrectionLevels": [{ "value": "H", "label": "H — สูงสุด (30%) แนะนำเมื่อมีโลโก้" }, "..."],
     "exportFormats":         [{ "value": "png", "label": "PNG" }, "..."],
     "wifiEncryptions":       [{ "value": "WPA", "label": "WPA/WPA2/WPA3" }, "..."],
-    "textPositions":         [{ "value": "bottom", "label": "ใต้ QR" }, "..."]
+    "textPositions":         [{ "value": "bottom", "label": "ใต้ QR" }, "..."],
+    "logoShapes":            [{ "value": "circle", "label": "วงกลม" }, "..."]
   }
 }
 ```
@@ -100,6 +101,7 @@ Client (`src/utils/apiClient.js`) แกะ `data` ออกให้แล้�
 | `exportFormats` | `png`, `svg`, `jpeg`, `webp` |
 | `wifiEncryptions` | `WPA`, `WEP`, `nopass` |
 | `textPositions` | `bottom`, `top` |
+| `logoShapes` | `square`, `rounded`, `circle` |
 
 ที่มา: `API/KusccQr.Api/Modules/Lookups/LookupModule.cs`
 
@@ -218,7 +220,7 @@ Soft delete (`is_deleted = 1`) → `200` + `{ "id": 12 }` | `404`
 ## 4. โครง `QrStyle`
 
 คือ options ของ `qr-code-styling` **ยกเว้น** `data`, `width`, `height`, `type` (Client ใส่ตอน render/export)
-**บวก** `textOptions` ซึ่งเป็นของแอปเราเอง (`qrRenderer.js` วาดเพิ่ม ไลบรารีไม่รู้จัก)
+**บวก** field ของแอปเราเอง (ไลบรารีไม่รู้จัก — `qrRenderer.js` จัดการก่อนส่งให้ไลบรารี): `textOptions` และ `imageOptions.shape`
 `margin` และ `textOptions.fontSize` เก็บเทียบกับภาพกว้าง 600px แล้ว Client ขยายตามขนาด export
 
 ```json
@@ -238,13 +240,14 @@ Soft delete (`is_deleted = 1`) → `200` + `{ "id": 12 }` | `404`
   "cornersDotOptions": { "type": "dot", "color": "#064e3b" },
   "backgroundOptions": { "color": "#ffffff" },
   "image": "data:image/png;base64,... | null",
-  "imageOptions": { "imageSize": 0.35, "margin": 6, "hideBackgroundDots": true, "crossOrigin": "anonymous" },
+  "imageOptions": { "imageSize": 0.35, "margin": 6, "hideBackgroundDots": true, "crossOrigin": "anonymous", "shape": "circle" },
   "textOptions": { "text": "สแกนเพื่อลงทะเบียน", "position": "bottom", "color": "#064e3b", "fontSize": 36, "bold": true }
 }
 ```
 
 - `dotsOptions.gradient` ไม่มี = สีเดียว; `rotation` เป็น radian
 - `backgroundOptions.color = "transparent"` = พื้นโปร่งใส
+- `imageOptions.shape`: `square` (ภาพเดิม, ค่าเริ่มต้น) | `rounded` | `circle` — crop กลางภาพเป็นจัตุรัสแล้วตัดขอบตอน render; `image` ที่เก็บยังเป็นภาพต้นฉบับ
 - `textOptions.text` ว่าง = ไม่มีข้อความ; ขึ้นบรรทัดใหม่ด้วย `\n`; ข้อความยาวเกิน 90% ของความกว้างจะถูกย่อฟอนต์อัตโนมัติ
   ภาพที่มีข้อความจะสูงกว่าความกว้าง (ไม่ใช่สี่เหลี่ยมจัตุรัส) — SVG ใช้ฟอนต์ Noto Sans Thai ของเครื่องที่เปิดไฟล์
 - QR ที่บันทึกก่อนมี `textOptions` → Client เติมค่าเริ่มต้นให้ (`mergeStyle(DEFAULT_STYLE, style)`)
@@ -300,3 +303,4 @@ Connection string: `ConnectionStrings:DefaultConnection` — **ห้าม comm
 | 2026-11-13 | 1.0.0 | สัญญาแรก: health, lookups, brand-presets (read), qr-codes CRUD |
 | 2026-11-13 | 1.1.0 | เพิ่ม `style.textOptions` (ข้อความเหนือ/ใต้ QR) และ `lookups.textPositions` |
 | 2026-11-13 | 1.2.0 | 500 ตอบเป็น `ApiResponse`, เพิ่มโหมดทดสอบ (dev bypass) |
+| 2026-11-13 | 1.3.0 | เพิ่ม `style.imageOptions.shape` (โลโก้มุมมน/วงกลม) และ `lookups.logoShapes` |

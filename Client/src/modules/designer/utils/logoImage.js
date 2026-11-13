@@ -1,7 +1,8 @@
 // File: Client/src/modules/designer/utils/logoImage.js
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: เตรียมไฟล์โลโก้ก่อนใส่ใน QR — ถ้าไฟล์ใหญ่หรือภาพกว้างเกิน จะย่อ/บีบอัดอัตโนมัติ (คงพื้นโปร่งใส)
 //              ผลลัพธ์เป็น data URL ที่เก็บใน style.image (API จำกัด style ทั้งก้อน ~1 MB)
+//              และตัดโลโก้เป็นรูปทรง (มุมมน/วงกลม) ตอน render ด้วย applyLogoShape
 
 // ขนาดไฟล์โลโก้หลังย่อ (bytes) — base64 ขยาย ~33% จึงยังเหลือที่ให้ส่วนอื่นของ style
 export const MAX_LOGO_BYTES = 500 * 1024
@@ -81,4 +82,54 @@ export const prepareLogo = async (file) => {
   } finally {
     URL.revokeObjectURL(url)
   }
+}
+
+// ---------- รูปทรงโลโก้ (style.imageOptions.shape) ----------
+// ตัดภาพตอน render (ไม่แก้ไฟล์ที่เก็บ) จึงเปลี่ยนรูปทรงกลับไปมาได้ — cache ผลไว้ไม่ให้ตัดซ้ำทุกครั้งที่ preview
+const SHAPE_CACHE_LIMIT = 8
+const shapeCache = new Map()
+const ROUNDED_RADIUS_RATIO = 0.2
+
+const loadImageFromUrl = (src) =>
+  new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new LogoError('เปิดภาพโลโก้ไม่ได้'))
+    img.src = src
+  })
+
+/**
+ * คืน data URL ของโลโก้ที่ตัดเป็นรูปทรงแล้ว ('square' = ใช้ภาพเดิม)
+ * rounded/circle: crop กลางภาพให้เป็นจัตุรัส (cover) แล้ว clip ให้พื้นนอกรูปทรงโปร่งใส
+ */
+export const applyLogoShape = async (dataUrl, shape) => {
+  if (!dataUrl || !shape || shape === 'square') return dataUrl
+
+  const cacheKey = `${shape}|${dataUrl.length}|${dataUrl.slice(-48)}`
+  if (shapeCache.has(cacheKey)) return shapeCache.get(cacheKey)
+
+  const img = await loadImageFromUrl(dataUrl)
+  const sourceWidth = img.naturalWidth || MAX_LOGO_SIDE
+  const sourceHeight = img.naturalHeight || MAX_LOGO_SIDE
+  const cropSide = Math.min(sourceWidth, sourceHeight)
+  const side = Math.min(cropSide, MAX_LOGO_SIDE)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = side
+  canvas.height = side
+  const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingQuality = 'high'
+  ctx.beginPath()
+  if (shape === 'circle') {
+    ctx.arc(side / 2, side / 2, side / 2, 0, Math.PI * 2)
+  } else {
+    ctx.roundRect(0, 0, side, side, side * ROUNDED_RADIUS_RATIO)
+  }
+  ctx.clip()
+  ctx.drawImage(img, (sourceWidth - cropSide) / 2, (sourceHeight - cropSide) / 2, cropSide, cropSide, 0, 0, side, side)
+
+  const shaped = canvas.toDataURL('image/png')
+  if (shapeCache.size >= SHAPE_CACHE_LIMIT) shapeCache.delete(shapeCache.keys().next().value)
+  shapeCache.set(cacheKey, shaped)
+  return shaped
 }

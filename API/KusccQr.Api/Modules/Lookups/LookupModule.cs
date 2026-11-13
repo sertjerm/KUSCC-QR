@@ -1,5 +1,5 @@
 // File: API/KusccQr.Api/Modules/Lookups/LookupModule.cs
-// Version: 1.1.0
+// Version: 1.2.0
 // Description: ตัวเลือก dropdown ทั้งหมดของหน้า Designer (ประเภท QR, รูปทรงจุด/มุม, ระดับแก้ผิด, รูปแบบไฟล์)
 //              ค่า value ต้องตรงกับ option ของไลบรารี qr-code-styling — frontend ห้าม hardcode รายการเหล่านี้เอง
 using KusccQr.Api.Common.DTOs;
@@ -18,7 +18,8 @@ namespace KusccQr.Api.Modules.Lookups.Services
         IReadOnlyList<LookupOption> ErrorCorrectionLevels,
         IReadOnlyList<LookupOption> ExportFormats,
         IReadOnlyList<LookupOption> WifiEncryptions,
-        IReadOnlyList<LookupOption> TextPositions);
+        IReadOnlyList<LookupOption> TextPositions,
+        IReadOnlyList<LookupOption> LogoShapes);
 
     public interface ILookupService
     {
@@ -88,6 +89,12 @@ namespace KusccQr.Api.Modules.Lookups.Services
             [
                 new("bottom", "ใต้ QR"),
                 new("top", "เหนือ QR"),
+            ],
+            LogoShapes:
+            [
+                new("square", "ตามต้นฉบับ"),
+                new("rounded", "สี่เหลี่ยมมุมมน"),
+                new("circle", "วงกลม"),
             ]);
 
         public LookupsDto GetAll() => Lookups;
