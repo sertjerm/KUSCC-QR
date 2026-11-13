@@ -1,7 +1,8 @@
 // File: API/KusccQr.Api/Infrastructure/Auth/SsoAuthenticationHandler.cs
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: ตรวจ Bearer token กับ KUSCC-SSO (GET /Auth/verify-token) แล้วสร้าง ClaimsPrincipal
 //              cache ผลตรวจไว้สั้น ๆ (ตาม Sso:VerifyCacheSeconds) เพื่อลดการยิง SSO ทุก request
+//              โหมดทดสอบ (Sso:DevBypass) รับ token ปลอมได้ — ทำงานเฉพาะ Development + request จากเครื่องตัวเองเท่านั้น
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -20,9 +21,13 @@ public sealed class SsoAuthenticationHandler : AuthenticationHandler<Authenticat
     public const string HttpClientName = "KusccSso";
     private const string DefaultVerifyUrl = "https://apps4.coop.ku.ac.th/kusccsso/api/Auth/verify-token";
 
+    // ต้องตรงกับ DEV_BYPASS_TOKEN ใน Client/src/utils/auth.js (JWT ปลอม exp ปี 2100)
+    public const string DevBypassToken = "eyJhbGciOiJub25lIn0.eyJleHAiOjQxMDI0NDQ4MDB9.dev-bypass";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly IMemoryCache _cache;
+    private readonly IHostEnvironment _environment;
 
     public SsoAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -30,9 +35,11 @@ public sealed class SsoAuthenticationHandler : AuthenticationHandler<Authenticat
         UrlEncoder encoder,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IHostEnvironment environment)
         : base(options, logger, encoder)
     {
+        _environment = environment;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _cache = cache;
@@ -48,6 +55,13 @@ public sealed class SsoAuthenticationHandler : AuthenticationHandler<Authenticat
         }
 
         var token = authorization.Parameter;
+
+        if (token == DevBypassToken)
+        {
+            return IsDevBypassAllowed()
+                ? AuthenticateResult.Success(CreateDevBypassTicket())
+                : AuthenticateResult.Fail("Dev bypass token is not allowed here.");
+        }
         var cacheKey = "sso:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
         if (!_cache.TryGetValue(cacheKey, out List<Claim>? claims) || claims is null)
@@ -82,6 +96,24 @@ public sealed class SsoAuthenticationHandler : AuthenticationHandler<Authenticat
 
         var identity = new ClaimsIdentity(claims, SchemeName, CurrentUser.NameClaim, ClaimTypes.Role);
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
+    }
+
+    // 3 ชั้น: environment = Development, เปิด Sso:DevBypass, และ request มาจาก loopback เท่านั้น
+    private bool IsDevBypassAllowed() =>
+        _environment.IsDevelopment() &&
+        _configuration.GetValue("Sso:DevBypass", false) &&
+        Context.Connection.RemoteIpAddress is { } ip && System.Net.IPAddress.IsLoopback(ip);
+
+    private AuthenticationTicket CreateDevBypassTicket()
+    {
+        var claims = new List<Claim>
+        {
+            new(CurrentUser.MemberCodeClaim, _configuration["Sso:DevBypassMemberCode"] ?? "999999"),
+            new(CurrentUser.NameClaim, "ผู้ทดสอบ (โหมดทดสอบ)"),
+            new(CurrentUser.MemberTypeClaim, "member"),
+        };
+        var identity = new ClaimsIdentity(claims, SchemeName, CurrentUser.NameClaim, ClaimTypes.Role);
+        return new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
     }
 
     // คืน null เมื่อ token ใช้ไม่ได้, throw เมื่อเรียก SSO ไม่สำเร็จ

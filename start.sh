@@ -1,9 +1,10 @@
 #!/bin/bash
 # File: start.sh
-# Version: 1.0.0
+# Version: 1.1.0
 # Description: รัน KUSCC-QR บนเครื่อง dev — API (.NET) + Client (Vite) พร้อมกัน, Ctrl+C หยุดทั้งคู่
 #   ./start.sh 1   API local + Client local (ค่าเริ่มต้น)
 #   ./start.sh 2   Client อย่างเดียว
+#   ./start.sh 3   โหมดทดสอบ — ไม่ต้อง login SSO (API รับ token ทดสอบจาก localhost เท่านั้น)
 
 cd "$(dirname "$0")" || exit 1
 source ./ports.env
@@ -35,6 +36,12 @@ if [ "$MODE" = "2" ]; then
     echo "🌐 Client only → http://localhost:$PORT_CLIENT"
     cd Client && VITE_API_PORT=$PORT_API npm run dev
     exit
+fi
+
+if [ "$MODE" = "3" ]; then
+    echo "🧪 โหมดทดสอบ: ข้าม SSO (ผู้ใช้ทดสอบ 999999) — ห้ามใช้บน server จริง"
+    export VITE_SSO_BYPASS=true
+    export Sso__DevBypass=true
 fi
 
 kill_port "$PORT_API"

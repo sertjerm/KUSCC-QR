@@ -93,6 +93,22 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+// error ที่ไม่ได้ดักไว้ → ตอบ ApiResponse JSON (Client อ่าน message ได้) — แสดงรายละเอียดเฉพาะ Development
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
+{
+    var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    var message = app.Environment.IsDevelopment() && exception is not null
+        ? $"เกิดข้อผิดพลาดภายในระบบ: {exception.Message}"
+        : "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่หรือติดต่อผู้ดูแล";
+    await context.Response.WriteAsJsonAsync(ApiResponse<object>.Fail(message));
+}));
+
+if (app.Environment.IsDevelopment() && app.Configuration.GetValue("Sso:DevBypass", false))
+{
+    app.Logger.LogWarning("⚠️ โหมดทดสอบ (Sso:DevBypass) เปิดอยู่ — รับ token ปลอมจาก localhost ได้");
+}
+
 // Swagger เปิดเฉพาะเครื่องพัฒนา — ใช้ relative path ไม่ hardcode host
 if (app.Environment.IsDevelopment())
 {

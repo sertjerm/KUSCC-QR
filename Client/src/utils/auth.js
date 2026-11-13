@@ -1,7 +1,8 @@
 // File: Client/src/utils/auth.js
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: SSO Auth utility ตามกติกาใน SSO_INTEGRATION_GUIDE — ตรวจ exp ก่อนใช้ token, ล้างเฉพาะ auth keys,
 //              refresh token, logout แบบ revoke + logout=true
+//              โหมดทดสอบ (VITE_SSO_BYPASS=true ตอน npm run dev เท่านั้น) — ข้าม SSO ใช้ token ปลอมที่ API ยอมรับเฉพาะ localhost
 
 export const SSO_BASE_URL = 'https://apps4.coop.ku.ac.th/kusccsso'
 export const SSO_LOGIN_URL = `${SSO_BASE_URL}/login`
@@ -11,6 +12,16 @@ export const APP_ID = import.meta.env.VITE_APP_ID || 'KUSCC-QR'
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'KUSCC QR Studio'
 
 const AUTH_KEYS = ['sso_token', 'sso_user']
+
+// import.meta.env.DEV เป็น false ใน production build → โค้ดโหมดทดสอบถูกตัดทิ้ง
+export const IS_DEV_BYPASS = import.meta.env.DEV && import.meta.env.VITE_SSO_BYPASS === 'true'
+// ต้องตรงกับ SsoAuthenticationHandler.DevBypassToken ฝั่ง API
+const DEV_BYPASS_TOKEN = 'eyJhbGciOiJub25lIn0.eyJleHAiOjQxMDI0NDQ4MDB9.dev-bypass'
+
+export const signInDevBypass = () => {
+  localStorage.setItem('sso_token', DEV_BYPASS_TOKEN)
+  localStorage.setItem('sso_user', JSON.stringify({ memberCode: '999999', name: 'ผู้ทดสอบ (โหมดทดสอบ)', memberType: 'member' }))
+}
 
 export const getSSOToken = () => localStorage.getItem('sso_token')
 
@@ -56,6 +67,10 @@ const buildSsoUrl = (extraParams = {}) => {
 }
 
 export const redirectToLogin = () => {
+  if (IS_DEV_BYPASS) {
+    console.warn('[โหมดทดสอบ] API ไม่ยอมรับ token ทดสอบ — รัน API ด้วย ./start.sh 3')
+    return
+  }
   clearLocalAuth()
   window.location.assign(buildSsoUrl())
 }
@@ -78,7 +93,7 @@ export const consumeSsoCallback = () => {
 // คืน token ใหม่ถ้า refresh สำเร็จ, null ถ้าไม่ได้
 export const tryRefreshToken = async () => {
   const token = getSSOToken()
-  if (!token) return null
+  if (!token || IS_DEV_BYPASS) return null
   try {
     const res = await fetch(`${SSO_API_URL}/Auth/refresh-token`, {
       method: 'POST',
@@ -100,6 +115,11 @@ export const tryRefreshToken = async () => {
 
 // ใช้ทั้งปุ่ม "ออกจากระบบ" และ "เปลี่ยนผู้ใช้" — revoke token แบบ best-effort แล้วให้ SSO ล้าง session กลาง
 export const logout = async () => {
+  if (IS_DEV_BYPASS) {
+    clearLocalAuth()
+    window.location.reload()
+    return
+  }
   const token = getSSOToken()
   if (token) {
     try {

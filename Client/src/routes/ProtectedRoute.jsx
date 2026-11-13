@@ -1,10 +1,19 @@
 // File: Client/src/routes/ProtectedRoute.jsx
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: ครอบ route ที่ต้อง login — รับ callback จาก SSO, ตรวจ exp, ลอง refresh ก่อน redirect ไปหน้า SSO
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Spin } from 'antd'
-import { consumeSsoCallback, getSSOToken, getSSOUser, isJwtUsable, redirectToLogin, tryRefreshToken } from '../utils/auth.js'
+import {
+  consumeSsoCallback,
+  getSSOToken,
+  getSSOUser,
+  IS_DEV_BYPASS,
+  isJwtUsable,
+  redirectToLogin,
+  signInDevBypass,
+  tryRefreshToken,
+} from '../utils/auth.js'
 
 const ProtectedRoute = () => {
   const [ready, setReady] = useState(false)
@@ -12,6 +21,11 @@ const ProtectedRoute = () => {
   useEffect(() => {
     let cancelled = false
     const check = async () => {
+      if (IS_DEV_BYPASS) {
+        signInDevBypass()
+        if (!cancelled) setReady(true)
+        return
+      }
       consumeSsoCallback()
       const token = getSSOToken()
       if (token && getSSOUser() && isJwtUsable(token)) {

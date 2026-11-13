@@ -24,6 +24,12 @@
 - เจ้าของข้อมูล = claim `MemberCode` (เติม 0 ให้ครบ 6 หลัก) — ผู้ใช้เห็น/แก้ได้เฉพาะ QR ของตัวเอง
 - token ไม่มี / หมดอายุ / verify ไม่ผ่าน → `401`; Client จะลอง refresh 1 ครั้ง แล้ว redirect ไป SSO
 
+**โหมดทดสอบ (dev เท่านั้น)** — `./start.sh 3`
+- Client ส่ง token คงที่ `SsoAuthenticationHandler.DevBypassToken` (ไม่ผ่าน SSO)
+- API ยอมรับก็ต่อเมื่อครบ 3 ข้อ: `ASPNETCORE_ENVIRONMENT=Development`, `Sso:DevBypass=true`, request มาจาก loopback
+  → ได้ผู้ใช้ `MemberCode = Sso:DevBypassMemberCode` (ค่าเริ่มต้น `999999`)
+- ไม่ครบเงื่อนไข → `401` เหมือน token ปลอมทั่วไป
+
 ## 2. รูปแบบ Response มาตรฐาน
 
 ทุก endpoint (ยกเว้น `/health`) ตอบเป็น `ApiResponse<T>`:
@@ -43,6 +49,7 @@
 | 400 | ข้อมูลไม่ถูกต้อง — ข้อความอยู่ใน `message` / `errors` | `false` |
 | 401 | ไม่มี token หรือ token ใช้ไม่ได้ | `false` |
 | 404 | ไม่พบข้อมูล (หรือไม่ใช่ของผู้ใช้คนนี้) | `false` |
+| 500 | error ภายใน (เช่น ต่อ DB ไม่ได้) — `message` มีรายละเอียดเฉพาะ Development | `false` |
 
 400 จาก model validation (`[Required]`, `[MaxLength]`, `[Range]`) ก็ใช้รูปแบบเดียวกัน:
 `{ "success": false, "message": "ข้อมูลไม่ถูกต้อง", "errors": ["name: The Name field is required."] }`
@@ -262,7 +269,7 @@ Soft delete (`is_deleted = 1`) → `200` + `{ "id": 12 }` | `404`
 
 ## 6. Database (MSSQL)
 
-สคริปต์: `docs/db/001_create_tables.sql`
+Database: `COOP` (ตัวเดียวกับ KUSCC-CENTER) · สคริปต์: `docs/db/001_create_tables.sql` (รันแล้ว 2026-11-13)
 
 | ตาราง | หน้าที่ |
 |---|---|
@@ -292,3 +299,4 @@ Connection string: `ConnectionStrings:DefaultConnection` — **ห้าม comm
 |---|---|---|
 | 2026-11-13 | 1.0.0 | สัญญาแรก: health, lookups, brand-presets (read), qr-codes CRUD |
 | 2026-11-13 | 1.1.0 | เพิ่ม `style.textOptions` (ข้อความเหนือ/ใต้ QR) และ `lookups.textPositions` |
+| 2026-11-13 | 1.2.0 | 500 ตอบเป็น `ApiResponse`, เพิ่มโหมดทดสอบ (dev bypass) |
