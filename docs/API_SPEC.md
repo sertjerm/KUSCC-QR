@@ -147,6 +147,7 @@ Client (`src/utils/apiClient.js`) แกะ `data` ออกให้แล้�
         "qrType": "url",
         "content": "https://www.kuscc.com",
         "thumbnailDataUrl": "data:image/png;base64,...",
+        "dynamicLink": null,
         "createdAt": "2026-11-13T10:00:00",
         "updatedAt": "2026-11-13T10:05:00"
       }
@@ -159,6 +160,7 @@ Client (`src/utils/apiClient.js`) แกะ `data` ออกให้แล้�
 ```
 
 > list **ไม่ส่ง** `data` / `style` เพื่อให้ payload เล็ก — ต้องเรียก `GET /qr-codes/{id}` เมื่อจะแก้
+> `search` ค้นใน `target_url` ของ Dynamic link ด้วย
 
 ### 3.5 `GET /qr-codes/{id}`
 
@@ -173,6 +175,7 @@ Client (`src/utils/apiClient.js`) แกะ `data` ออกให้แล้�
     "data":  { "url": "https://www.kuscc.com" },
     "style": { "margin": 16, "qrOptions": { "errorCorrectionLevel": "Q" }, "...": "..." },
     "thumbnailDataUrl": "data:image/png;base64,...",
+    "dynamicLink": null,
     "createdAt": "2026-11-13T10:00:00",
     "updatedAt": "2026-11-13T10:05:00"
   }
@@ -180,6 +183,24 @@ Client (`src/utils/apiClient.js`) แกะ `data` ออกให้แล้�
 ```
 
 404 ถ้าไม่พบ / ถูกลบแล้ว / เป็นของคนอื่น
+
+**`dynamicLink`** — `null` = QR ปกติ; QR แบบ Dynamic (ใช้ได้ทั้ง list และ detail):
+
+```json
+{
+  "content": "https://apps4.coop.ku.ac.th/kuscc-qr/api/r/k7m2qxa",
+  "data": { "url": "https://www.kuscc.com/event" },
+  "dynamicLink": {
+    "shortCode": "k7m2qxa",
+    "shortUrl": "https://apps4.coop.ku.ac.th/kuscc-qr/api/r/k7m2qxa",
+    "targetUrl": "https://www.kuscc.com/event",
+    "scanCount": 42,
+    "lastScannedAt": "2026-11-13T14:20:00"
+  }
+}
+```
+
+- `content` และ `shortUrl` = สิ่งที่ encode ลง QR (ไม่เปลี่ยนตลอดอายุ QR); `data.url` = `targetUrl` = ปลายทางที่แก้ได้
 
 ### 3.6 `POST /qr-codes` → `201 Created`
 
@@ -193,6 +214,16 @@ Request body — **QrCodeSaveRequest**
 | `data` | object | – | ค่าฟอร์มตามประเภท (ข้อ 5) ≤ 20,000 ตัวอักษรเมื่อ serialize |
 | `style` | object | ✅ | โครง **QrStyle** (ข้อ 4) ≤ 1,000,000 ตัวอักษร (รวมโลโก้ data URL) |
 | `thumbnailDataUrl` | string \| null | – | ต้องขึ้นต้น `data:image/` ≤ 280,000 ตัวอักษร |
+| `isDynamic` | bool | – | ค่าเริ่มต้น `false` — ดูกติกา Dynamic link ด้านล่าง |
+
+**Dynamic link (`isDynamic = true`)**
+- ใช้ได้เฉพาะ `qrType = url` — ไม่ใช่ → `400`
+- `content` ที่ส่งมา = **ปลายทาง** ต้องเป็น `http://` / `https://` ≤ 2,000 ตัวอักษร
+- Server สุ่ม `shortCode` 7 ตัว (`23456789abcdefghjkmnpqrstuvwxyz`) ครั้งเดียวตอนเปิดใช้ แล้วตั้ง `content = {DynamicLink:BaseUrl}/{shortCode}` เอง
+  (ข้อยกเว้นเดียวของกติกา "Server ไม่สร้าง content")
+- `PUT` ที่ QR เป็น Dynamic อยู่แล้ว: `shortCode` ไม่เปลี่ยน, แก้ได้แค่ปลายทาง; ส่ง `isDynamic = false` → `400` (ปิดไม่ได้)
+- `PUT` เปลี่ยน QR ปกติเป็น Dynamic ได้ (ได้ `content` ใหม่ → ต้องพิมพ์ QR ใหม่)
+- Client สร้างภาพย่อจาก `content` ที่ตอบกลับ — ถ้าต่างจากที่ใช้ทำภาพย่อ จะ `PUT` ซ้ำเพื่ออัปเดต `thumbnailDataUrl`
 
 ```json
 {
@@ -214,6 +245,23 @@ body เหมือน `POST` (แทนที่ทั้งรายการ
 ### 3.8 `DELETE /qr-codes/{id}`
 
 Soft delete (`is_deleted = 1`) → `200` + `{ "id": 12 }` | `404`
+QR แบบ Dynamic ที่ถูกลบ ลิงก์สั้นจะตอบ `404` ทันที (shortCode ไม่ถูกนำกลับมาใช้ซ้ำ)
+
+### 3.9 `GET /r/{shortCode}` — *Public*
+
+ลิงก์สั้นของ Dynamic QR (คนสแกนไม่ต้อง login) — ไม่ใช้ `ApiResponse`
+
+| ผลลัพธ์ | HTTP |
+|---|---|
+| พบ (Dynamic, ไม่ถูกลบ) | `302` `Location: {targetUrl}` + บันทึกการสแกน (`scan_count + 1`, `last_scanned_at`, แถวใน `kuscc_qr_scans`) |
+| ไม่พบ / ถูกลบ / รูปแบบรหัสผิด | `404` หน้า HTML ภาษาไทย "ไม่พบลิงก์นี้" |
+
+- `Cache-Control: no-store` — เปลี่ยนปลายทางแล้วมีผลทันที
+- ไม่สนตัวพิมพ์ใหญ่/เล็กของ `shortCode`
+- บันทึกเฉพาะเวลาและ User-Agent (≤ 400 ตัวอักษร) **ไม่เก็บ IP**
+- ตาราง `kuscc_qr_codes` ถูกค้นด้วย `short_code` โดยไม่กรองเจ้าของ — คืนแค่ `id` กับ `target_url` ไม่เปิดเผยข้อมูลอื่น
+- `DynamicLink:BaseUrl` (appsettings.json) = `https://apps4.coop.ku.ac.th/kuscc-qr/api/r` ทั้ง dev และ prod เพราะใช้ DB `COOP` ตัวเดียวกัน
+  ทดสอบ redirect บนเครื่องได้ที่ `http://localhost:5250/r/{shortCode}`
 
 ---
 
@@ -272,11 +320,17 @@ Soft delete (`is_deleted = 1`) → `200` + `{ "id": 12 }` | `404`
 
 ## 6. Database (MSSQL)
 
-Database: `COOP` (ตัวเดียวกับ KUSCC-CENTER) · สคริปต์: `docs/db/001_create_tables.sql` (รันแล้ว 2026-11-13)
+Database: `COOP` (ตัวเดียวกับ KUSCC-CENTER)
+
+| สคริปต์ | สถานะ |
+|---|---|
+| `docs/db/001_create_tables.sql` | รันแล้ว 2026-11-13 |
+| `docs/db/002_dynamic_links.sql` | รันแล้ว 2026-11-13 (API ที่มี Dynamic link ต้องมีสคริปต์นี้ก่อน ไม่งั้น query คอลัมน์ใหม่ error) |
 
 | ตาราง | หน้าที่ |
 |---|---|
-| `dbo.kuscc_qr_codes` | QR ที่ผู้ใช้บันทึก (`data_json`, `style_json` เก็บ JSON ดิบ) |
+| `dbo.kuscc_qr_codes` | QR ที่ผู้ใช้บันทึก (`data_json`, `style_json` เก็บ JSON ดิบ) + `is_dynamic`, `short_code` (unique), `target_url`, `scan_count`, `last_scanned_at` |
+| `dbo.kuscc_qr_scans` | ประวัติการสแกนลิงก์สั้น (`qr_code_id`, `scanned_at`, `user_agent`) |
 | `dbo.kuscc_qr_brand_presets` | ธีมองค์กร |
 
 Connection string: `ConnectionStrings:DefaultConnection` — **ห้าม commit รหัสผ่าน**
@@ -290,8 +344,7 @@ Connection string: `ConnectionStrings:DefaultConnection` — **ห้าม comm
 |---|---|---|
 | 2 | `POST/PUT/DELETE /brand-presets` | admin เท่านั้น (ตรวจสิทธิ์ผ่าน `kuscc_app_roles` ของ KUSCC-CENTER) |
 | 2 | `qrType = promptpay` | payload EMVCo + CRC16 สร้างฝั่ง Client |
-| 3 | `GET /r/{shortCode}` *Public* | Dynamic QR → `302` ไป `target_url` + บันทึกการสแกน |
-| 3 | `GET /qr-codes/{id}/stats` | จำนวนสแกนรายวัน |
+| 3 | `GET /qr-codes/{id}/stats` | จำนวนสแกนรายวัน (ข้อมูลจาก `kuscc_qr_scans` เก็บอยู่แล้ว) |
 | 3 | `POST /qr-codes/bulk` | สร้างจาก CSV |
 
 ---
@@ -301,6 +354,7 @@ Connection string: `ConnectionStrings:DefaultConnection` — **ห้าม comm
 | วันที่ | เวอร์ชัน | รายละเอียด |
 |---|---|---|
 | 2026-11-13 | 1.0.0 | สัญญาแรก: health, lookups, brand-presets (read), qr-codes CRUD |
+| 2026-11-13 | 1.1.0 | Dynamic link: `isDynamic` ใน request, `dynamicLink` ใน response, `GET /r/{shortCode}`, ตาราง `kuscc_qr_scans` (`002_dynamic_links.sql`) |
 | 2026-11-13 | 1.1.0 | เพิ่ม `style.textOptions` (ข้อความเหนือ/ใต้ QR) และ `lookups.textPositions` |
 | 2026-11-13 | 1.2.0 | 500 ตอบเป็น `ApiResponse`, เพิ่มโหมดทดสอบ (dev bypass) |
 | 2026-11-13 | 1.3.0 | เพิ่ม `style.imageOptions.shape` (โลโก้มุมมน/วงกลม) และ `lookups.logoShapes` |

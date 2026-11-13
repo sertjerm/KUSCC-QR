@@ -1,5 +1,5 @@
 // File: API/KusccQr.Api/Program.cs
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: Entry point ของ KUSCC-QR API — ลงทะเบียน Services, SSO Authentication และ Middleware
 using System.Text.Json;
 using KusccQr.Api.Common.DTOs;
@@ -72,6 +72,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
 
 // ---------- Modules: Controller → Service → Repository ----------
+builder.Services.Configure<DynamicLinkOptions>(builder.Configuration.GetSection(DynamicLinkOptions.SectionName));
 builder.Services.AddScoped<IQrCodeRepository, QrCodeRepository>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IBrandPresetRepository, BrandPresetRepository>();

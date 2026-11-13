@@ -13,7 +13,7 @@ Backend ทำหน้าที่เก็บ QR ที่บันทึก, 
 |---|---|
 | Repo | `https://github.com/sertjerm/KUSCC-QR.git` |
 | SSO App ID | `KUSCC-QR` (ต้องให้ผู้ดูแล SSO เพิ่ม host ใน `App:AllowedReturnUrlHosts`) |
-| Database | MSSQL `COOP` (Server `apps3.coop.ku.ac.th\db103express` — ตัวเดียวกับ KUSCC-CENTER) ตาราง `dbo.kuscc_qr_codes`, `dbo.kuscc_qr_brand_presets` (สร้างแล้ว 2026-11-13 ด้วย `docs/db/001_create_tables.sql`) |
+| Database | MSSQL `COOP` (Server `apps3.coop.ku.ac.th\db103express` — ตัวเดียวกับ KUSCC-CENTER) ตาราง `dbo.kuscc_qr_codes`, `dbo.kuscc_qr_brand_presets` (สร้างแล้ว 2026-11-13 ด้วย `docs/db/001_create_tables.sql`), `dbo.kuscc_qr_scans` + คอลัมน์ Dynamic link (`docs/db/002_dynamic_links.sql` — รันแล้ว 2026-11-13) |
 | Port (dev) | API `5250`, Client `5251` — กำหนดที่ `ports.env` ที่เดียว |
 | Production | `https://apps4.coop.ku.ac.th/kuscc-qr/` → redirect ไป `/kuscc-qr/client/` · API `https://apps4.coop.ku.ac.th/kuscc-qr/api` |
 
@@ -52,6 +52,7 @@ cp .deploy.env.example .deploy.env   # ครั้งแรก — กรอก
 - **ครั้งแรกต้องวาง `appsettings.Local.json` (connection string) ใน `api/` บน server ด้วยมือ** — publish ไม่รวมไฟล์นี้ (`CopyToPublishDirectory=Never`) และ deploy ไม่ทับ/ไม่ลบ
 - `build_prod.sh` ยกเลิกเองถ้าพบโค้ดโหมดทดสอบใน client หรือ `appsettings.Local.json` ใน publish
 - ต้องให้ผู้ดูแล SSO เพิ่ม `apps4.coop.ku.ac.th/kuscc-qr` ใน `App:AllowedReturnUrlHosts` (ถ้ายังไม่ครอบคลุม)
+- รันสคริปต์ `docs/db/*.sql` ที่ยังไม่ได้รันบน `COOP` **ก่อน** upload API เวอร์ชันใหม่
 
 ## โครงสร้าง
 
@@ -65,6 +66,7 @@ API/KusccQr.Api/
     Data/DbConnectionFactory       — SqlConnection จาก DefaultConnection
   Modules/
     QrCodes/      Controllers / Services / Repositories / Interfaces / DTOs — CRUD ของเจ้าของเท่านั้น
+                  DynamicLinksController — GET /r/{shortCode} (Public) → 302 ไปปลายทาง + นับการสแกน
     BrandPresets/ BrandPresetModule.cs (read-only)
     Lookups/      LookupModule.cs — ตัวเลือก dropdown ทั้งหมด (ไม่ใช้ DB)
 
@@ -75,7 +77,7 @@ Client/src/
   layouts/MainLayout.jsx
   modules/designer/
     pages/DesignerPage.jsx         — /designer, /designer/:id
-    components/ QrPreview, ContentForm, StylePanel, ExportPanel
+    components/ QrPreview, ContentForm, StylePanel, ExportPanel, DynamicLinkInfo
     utils/qrContent.js             — data → content ตาม qrType (vCard, Wi-Fi escape ฯลฯ)
     utils/qrStyle.js               — DEFAULT_STYLE, toStylingOptions, contrast warning
     utils/logoImage.js             — ย่อ/บีบอัดโลโก้อัตโนมัติ + ตัดรูปทรง (มุมมน/วงกลม) ตอน render
@@ -94,6 +96,10 @@ Client/src/
   API ยอมรับเฉพาะเมื่อ Development + `Sso:DevBypass=true` + request จาก localhost — **ห้ามตั้ง `Sso:DevBypass` ใน appsettings ที่ commit**
 - **เรียก `qr-code-styling` ผ่าน `qrRenderer.js` เท่านั้น** — ห้าม import ไลบรารีตรงในไฟล์อื่น (เปลี่ยนไลบรารีได้ที่จุดเดียว)
 - Server ไม่สร้าง `content` เอง — เก็บตามที่ Client ส่ง (ตรวจชนิด/ความยาว)
+  **ยกเว้น Dynamic link**: Client ส่งปลายทางมาใน `content`, Server ย้ายไป `target_url` แล้วตั้ง `content = {DynamicLink:BaseUrl}/{shortCode}`
+- Dynamic link: `short_code` ตั้งครั้งเดียวห้ามเปลี่ยน/นำกลับมาใช้, เปิดแล้วปิดไม่ได้, ใช้ได้เฉพาะ `url`;
+  `DynamicLink:BaseUrl` ชี้ production เสมอ (dev ใช้ DB เดียวกัน) — แก้ path ของ IIS ต้องแก้ค่านี้ด้วย
 - `COOP` เป็น DB จริงที่หลายแอปใช้ร่วมกัน (`COOP_DEV`/`COOP_TEST` ไม่ใช่สำเนา) — โหมดทดสอบเขียนลง DB จริงในชื่อผู้ใช้ `999999` ลบทิ้งได้ด้วย `owner_member_code = '999999'`
 - ทุก query ต้องกรอง `owner_member_code` — ห้ามมี endpoint ที่คืน QR ของคนอื่น
+  (ข้อยกเว้นเดียว: `FindRedirectAsync` ของลิงก์สั้น คืนแค่ `id` + `target_url`)
 - ทดสอบสแกนจริงด้วยมือถือทุกครั้งที่แก้ `qrContent.js` หรือ `qrStyle.js`

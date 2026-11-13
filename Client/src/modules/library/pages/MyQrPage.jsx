@@ -1,6 +1,7 @@
 // File: Client/src/modules/library/pages/MyQrPage.jsx
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: รายการ QR ที่ผู้ใช้บันทึกไว้ — ค้นหา, แบ่งหน้าฝั่ง server, เปิดแก้ และลบ
+//              QR แบบ Dynamic แสดงป้าย + จำนวนการสแกน
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { App, Button, Card, Col, Empty, Input, Pagination, Popconfirm, Row, Spin, Tag, Typography } from 'antd'
@@ -114,7 +115,14 @@ const MyQrPage = () => {
                     {qr.name}
                   </Typography.Text>
                   <div className="mt-1 flex items-center justify-between gap-1">
-                    <Tag className="!m-0">{typeLabels[qr.qrType] || qr.qrType}</Tag>
+                    <span className="flex flex-wrap gap-1">
+                      <Tag className="!m-0">{typeLabels[qr.qrType] || qr.qrType}</Tag>
+                      {qr.dynamicLink && (
+                        <Tag color="green" className="!m-0" title={`ปลายทาง: ${qr.dynamicLink.targetUrl}`}>
+                          Dynamic · {qr.dynamicLink.scanCount.toLocaleString()} สแกน
+                        </Tag>
+                      )}
+                    </span>
                     <Typography.Text type="secondary" className="text-xs">
                       {new Date(qr.updatedAt).toLocaleDateString('th-TH')}
                     </Typography.Text>
