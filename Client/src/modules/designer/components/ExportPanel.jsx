@@ -1,16 +1,15 @@
 // File: Client/src/modules/designer/components/ExportPanel.jsx
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: ดาวน์โหลด QR ตามรูปแบบไฟล์/ขนาดที่เลือก และคัดลอกภาพ PNG ลง clipboard
 import { useState } from 'react'
 import { App, Button, Col, Form, Row, Select, Space } from 'antd'
 import { CopyOutlined, DownloadOutlined } from '@ant-design/icons'
-import QRCodeStyling from 'qr-code-styling'
-import { toStylingOptions } from '../utils/qrStyle.js'
+import { copyQrToClipboard, downloadQr } from '../utils/qrRenderer.js'
 
 const toOptions = (items = []) => items.map((i) => ({ value: i.value, label: i.label }))
 
-// ขนาดภาพเป็นตัวเลือกด้านเทคนิค (ไม่ใช่ข้อมูลธุรกิจ) จึงกำหนดไว้ที่นี่
-const EXPORT_SIZES = [512, 1024, 2048, 4096].map((s) => ({ value: s, label: `${s} × ${s} px` }))
+// ขนาดภาพเป็นตัวเลือกด้านเทคนิค (ไม่ใช่ข้อมูลธุรกิจ) จึงกำหนดไว้ที่นี่ — ถ้ามีข้อความ ภาพจะสูงกว่าความกว้าง
+const EXPORT_SIZES = [512, 1024, 2048, 4096].map((s) => ({ value: s, label: `กว้าง ${s} px` }))
 
 const safeFileName = (name) => (name || 'kuscc-qr').trim().replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)
 
@@ -20,13 +19,10 @@ const ExportPanel = ({ style, content, name, lookups, disabled }) => {
   const [size, setSize] = useState(1024)
   const [busy, setBusy] = useState(false)
 
-  const buildQr = (extension, exportSize) =>
-    new QRCodeStyling(toStylingOptions(style, content, exportSize, extension === 'svg' ? 'svg' : 'canvas'))
-
   const handleDownload = async () => {
     setBusy(true)
     try {
-      await buildQr(format, size).download({ name: safeFileName(name), extension: format })
+      await downloadQr(style, content, { size, extension: format, fileName: safeFileName(name) })
     } catch (error) {
       message.error(`ดาวน์โหลดไม่สำเร็จ: ${error.message}`)
     } finally {
@@ -37,8 +33,7 @@ const ExportPanel = ({ style, content, name, lookups, disabled }) => {
   const handleCopy = async () => {
     setBusy(true)
     try {
-      const blob = await buildQr('png', size).getRawData('png')
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      await copyQrToClipboard(style, content, size)
       message.success('คัดลอกภาพแล้ว')
     } catch {
       message.error('เบราว์เซอร์นี้ไม่รองรับการคัดลอกรูปภาพ')

@@ -1,5 +1,5 @@
 // File: API/KusccQr.Api/Modules/Lookups/LookupModule.cs
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: ตัวเลือก dropdown ทั้งหมดของหน้า Designer (ประเภท QR, รูปทรงจุด/มุม, ระดับแก้ผิด, รูปแบบไฟล์)
 //              ค่า value ต้องตรงกับ option ของไลบรารี qr-code-styling — frontend ห้าม hardcode รายการเหล่านี้เอง
 using KusccQr.Api.Common.DTOs;
@@ -17,7 +17,8 @@ namespace KusccQr.Api.Modules.Lookups.Services
         IReadOnlyList<LookupOption> GradientTypes,
         IReadOnlyList<LookupOption> ErrorCorrectionLevels,
         IReadOnlyList<LookupOption> ExportFormats,
-        IReadOnlyList<LookupOption> WifiEncryptions);
+        IReadOnlyList<LookupOption> WifiEncryptions,
+        IReadOnlyList<LookupOption> TextPositions);
 
     public interface ILookupService
     {
@@ -82,6 +83,11 @@ namespace KusccQr.Api.Modules.Lookups.Services
                 new("WPA", "WPA/WPA2/WPA3"),
                 new("WEP", "WEP"),
                 new("nopass", "ไม่มีรหัสผ่าน"),
+            ],
+            TextPositions:
+            [
+                new("bottom", "ใต้ QR"),
+                new("top", "เหนือ QR"),
             ]);
 
         public LookupsDto GetAll() => Lookups;

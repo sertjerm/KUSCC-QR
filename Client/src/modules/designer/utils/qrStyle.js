@@ -1,5 +1,5 @@
 // File: Client/src/modules/designer/utils/qrStyle.js
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: ค่า style เริ่มต้น (รูปแบบ options ของ qr-code-styling), แปลงเป็น options สำหรับ render/export,
 //              ตรวจ contrast สี และ helper อ่านไฟล์โลโก้
 
@@ -13,12 +13,15 @@ export const DEFAULT_STYLE = {
   backgroundOptions: { color: '#ffffff' },
   image: null,
   imageOptions: { imageSize: 0.35, margin: 6, hideBackgroundDots: true, crossOrigin: 'anonymous' },
+  // ข้อความเหนือ/ใต้ QR — ไม่ใช่ option ของ qr-code-styling, qrRenderer.js เป็นผู้วาด (fontSize เทียบภาพ 600px)
+  textOptions: { text: '', position: 'bottom', color: '#064e3b', fontSize: 36, bold: true },
 }
 
 export const PREVIEW_SIZE = 600
 
-// รวม style + content + ขนาด เป็น options ที่ส่งให้ QRCodeStyling
-export const toStylingOptions = (style, content, size = PREVIEW_SIZE, type = 'canvas') => ({
+// รวม style + content + ขนาด เป็น options ที่ส่งให้ QRCodeStyling (ตัด textOptions ออก)
+// eslint-disable-next-line no-unused-vars
+export const toStylingOptions = ({ textOptions, ...style }, content, size = PREVIEW_SIZE, type = 'canvas') => ({
   ...style,
   type,
   width: size,
@@ -101,4 +104,3 @@ export const fileToDataUrl = (file) =>
     reader.readAsDataURL(file)
   })
 
-export const blobToDataUrl = fileToDataUrl

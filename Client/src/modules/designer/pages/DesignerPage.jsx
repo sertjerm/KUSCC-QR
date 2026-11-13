@@ -1,26 +1,19 @@
 // File: Client/src/modules/designer/pages/DesignerPage.jsx
-// Version: 1.0.0
+// Version: 1.1.0
 // Description: หน้าออกแบบ QR — ซ้ายกรอกข้อมูล/ตกแต่ง, ขวาภาพตัวอย่าง live + บันทึก + ดาวน์โหลด
 //              /designer = สร้างใหม่, /designer/:id = แก้ QR ที่บันทึกไว้
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, App, Button, Card, Col, Divider, Input, Radio, Row, Space, Spin, Typography } from 'antd'
 import { CopyOutlined, SaveOutlined } from '@ant-design/icons'
-import QRCodeStyling from 'qr-code-styling'
 import { createQrCode, getBrandPresets, getLookups, getQrCode, updateQrCode } from '../../../api/qrApi.js'
-import { blobToDataUrl, DEFAULT_STYLE, getScanWarnings, mergeStyle, toStylingOptions } from '../utils/qrStyle.js'
+import { DEFAULT_STYLE, getScanWarnings, mergeStyle } from '../utils/qrStyle.js'
+import { makeThumbnailDataUrl } from '../utils/qrRenderer.js'
 import { buildQrContent, DEFAULT_DATA, getByteLength, MAX_CONTENT_BYTES } from '../utils/qrContent.js'
 import QrPreview from '../components/QrPreview.jsx'
 import ContentForm from '../components/ContentForm.jsx'
 import StylePanel from '../components/StylePanel.jsx'
 import ExportPanel from '../components/ExportPanel.jsx'
-
-const THUMBNAIL_SIZE = 200
-
-const makeThumbnail = async (style, content) => {
-  const qr = new QRCodeStyling(toStylingOptions(style, content, THUMBNAIL_SIZE))
-  return blobToDataUrl(await qr.getRawData('png'))
-}
 
 const DesignerPage = () => {
   const { id } = useParams()
@@ -68,7 +61,6 @@ const DesignerPage = () => {
 
   const data = dataByType[qrType]
   const content = useMemo(() => buildQrContent(qrType, data), [qrType, data])
-  const previewOptions = useMemo(() => toStylingOptions(style, content), [style, content])
   const warnings = useMemo(() => getScanWarnings(style), [style])
   const contentBytes = getByteLength(content)
   const isContentValid = contentBytes > 0 && contentBytes <= MAX_CONTENT_BYTES
@@ -86,7 +78,7 @@ const DesignerPage = () => {
         content,
         data,
         style,
-        thumbnailDataUrl: await makeThumbnail(style, content),
+        thumbnailDataUrl: await makeThumbnailDataUrl(style, content),
       }
       if (id && !asNew) {
         await updateQrCode(id, payload)
@@ -141,7 +133,10 @@ const DesignerPage = () => {
               lookups={lookups}
               presets={presets}
               onChange={setStyle}
-              onApplyPreset={(preset) => setStyle((prev) => mergeStyle({ ...DEFAULT_STYLE, image: prev.image }, preset.style))}
+              onApplyPreset={(preset) =>
+                // preset เปลี่ยนแค่สี/รูปทรง — คงโลโก้และข้อความที่ผู้ใช้ใส่ไว้
+                setStyle((prev) => mergeStyle({ ...DEFAULT_STYLE, image: prev.image, textOptions: prev.textOptions }, preset.style))
+              }
             />
           </Card>
         </Space>
@@ -152,7 +147,7 @@ const DesignerPage = () => {
         <div className="lg:sticky lg:top-4">
           <Card title="3. ตัวอย่าง & ดาวน์โหลด">
             <div className="qr-checkerboard mx-auto w-full max-w-sm overflow-hidden rounded-xl border">
-              <QrPreview options={previewOptions} />
+              <QrPreview style={style} content={content} />
             </div>
             <Typography.Text type={isContentValid ? 'secondary' : 'danger'} className="mt-2 block text-center text-xs">
               {contentBytes === 0 ? 'ยังไม่มีข้อมูล — กรอกข้อมูลด้านซ้าย' : `${contentBytes.toLocaleString()} / ${MAX_CONTENT_BYTES.toLocaleString()} bytes`}

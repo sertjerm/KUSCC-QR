@@ -58,6 +58,7 @@ Client/src/
     components/ QrPreview, ContentForm, StylePanel, ExportPanel
     utils/qrContent.js             — data → content ตาม qrType (vCard, Wi-Fi escape ฯลฯ)
     utils/qrStyle.js               — DEFAULT_STYLE, toStylingOptions, contrast warning
+    utils/qrRenderer.js            — จุดเดียวที่เรียก qr-code-styling + วาดข้อความ (preview/export/copy/thumbnail)
   modules/library/pages/MyQrPage.jsx — /my-qr
 ```
 
@@ -68,6 +69,7 @@ Client/src/
 - `style` ที่บันทึก = options ของ qr-code-styling **ไม่รวม** `data/width/height/type` — ห้ามเปลี่ยนโครงโดยไม่แก้ spec ข้อ 4
 - `margin` เก็บเทียบภาพ 600px (`PREVIEW_SIZE`) แล้วขยายตามขนาด export
 - มีโลโก้ → ตั้ง error correction เป็น `H` อัตโนมัติ, โลโก้ ≤ 500 KB เก็บเป็น data URL ใน style
+- **เรียก `qr-code-styling` ผ่าน `qrRenderer.js` เท่านั้น** — ห้าม import ไลบรารีตรงในไฟล์อื่น (เปลี่ยนไลบรารีได้ที่จุดเดียว)
 - Server ไม่สร้าง `content` เอง — เก็บตามที่ Client ส่ง (ตรวจชนิด/ความยาว)
 - ทุก query ต้องกรอง `owner_member_code` — ห้ามมี endpoint ที่คืน QR ของคนอื่น
 - ทดสอบสแกนจริงด้วยมือถือทุกครั้งที่แก้ `qrContent.js` หรือ `qrStyle.js`

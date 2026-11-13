@@ -1,7 +1,7 @@
 // File: Client/src/modules/designer/components/StylePanel.jsx
-// Version: 1.0.0
-// Description: แผงตกแต่ง QR — Brand preset, รูปทรง/สีจุด (รองรับไล่สี), มุม, พื้นหลัง, โลโก้ และค่าขั้นสูง
-import { App, Button, Col, Collapse, ColorPicker, Empty, Form, Row, Select, Slider, Switch, Upload } from 'antd'
+// Version: 1.1.0
+// Description: แผงตกแต่ง QR — Brand preset, ข้อความเหนือ/ใต้ QR, รูปทรง/สีจุด (รองรับไล่สี), มุม, พื้นหลัง, โลโก้ และค่าขั้นสูง
+import { App, Button, Col, Collapse, ColorPicker, Empty, Form, Input, Row, Select, Slider, Switch, Upload } from 'antd'
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import { fileToDataUrl, MAX_LOGO_BYTES } from '../utils/qrStyle.js'
 
@@ -74,6 +74,46 @@ const StylePanel = ({ style, lookups, presets, onChange, onApplyPreset }) => {
         </Row>
       ) : (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="ยังไม่มี preset" />
+      ),
+    },
+    {
+      key: 'text',
+      label: 'ข้อความ',
+      children: (
+        <Row gutter={12}>
+          <Col xs={24}>
+            <Form.Item label="ข้อความ (ขึ้นบรรทัดใหม่ได้)">
+              <Input.TextArea
+                rows={2}
+                maxLength={120}
+                showCount
+                placeholder="เช่น สแกนเพื่อลงทะเบียน"
+                value={style.textOptions?.text}
+                onChange={(e) => set('textOptions', { text: e.target.value })}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={12} md={8}>
+            <Form.Item label="ตำแหน่ง">
+              <Select value={style.textOptions?.position} options={toOptions(lookups?.textPositions)} onChange={(position) => set('textOptions', { position })} />
+            </Form.Item>
+          </Col>
+          <Col xs={12} md={8}>
+            <Form.Item label="สีข้อความ">
+              <ColorPicker value={style.textOptions?.color} showText onChangeComplete={(c) => set('textOptions', { color: toHex(c) })} />
+            </Form.Item>
+          </Col>
+          <Col xs={12} md={8}>
+            <Form.Item label="ตัวหนา">
+              <Switch checked={style.textOptions?.bold} onChange={(bold) => set('textOptions', { bold })} />
+            </Form.Item>
+          </Col>
+          <Col xs={24}>
+            <Form.Item label="ขนาดตัวอักษร" extra="ถ้าข้อความยาวเกินความกว้าง QR ระบบจะย่อให้อัตโนมัติ">
+              <Slider min={16} max={72} value={style.textOptions?.fontSize} onChange={(fontSize) => set('textOptions', { fontSize })} />
+            </Form.Item>
+          </Col>
+        </Row>
       ),
     },
     {
@@ -238,7 +278,7 @@ const StylePanel = ({ style, lookups, presets, onChange, onApplyPreset }) => {
 
   return (
     <Form layout="vertical" component="div">
-      <Collapse items={items} defaultActiveKey={['preset', 'dots']} bordered={false} className="!bg-transparent" />
+      <Collapse items={items} defaultActiveKey={['text', 'logo']} bordered={false} className="!bg-transparent" />
     </Form>
   )
 }
