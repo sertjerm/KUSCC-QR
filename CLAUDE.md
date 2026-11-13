@@ -78,6 +78,7 @@ Client/src/
     components/ QrPreview, ContentForm, StylePanel, ExportPanel
     utils/qrContent.js             — data → content ตาม qrType (vCard, Wi-Fi escape ฯลฯ)
     utils/qrStyle.js               — DEFAULT_STYLE, toStylingOptions, contrast warning
+    utils/logoImage.js             — ย่อ/บีบอัดโลโก้อัตโนมัติก่อนใส่ใน style
     utils/qrRenderer.js            — จุดเดียวที่เรียก qr-code-styling + วาดข้อความ (preview/export/copy/thumbnail)
   modules/library/pages/MyQrPage.jsx — /my-qr
 ```
@@ -88,7 +89,7 @@ Client/src/
   (ข้อยกเว้นเดียว: ขนาด export px ใน `ExportPanel.jsx` เป็นค่าทางเทคนิค)
 - `style` ที่บันทึก = options ของ qr-code-styling **ไม่รวม** `data/width/height/type` — ห้ามเปลี่ยนโครงโดยไม่แก้ spec ข้อ 4
 - `margin` เก็บเทียบภาพ 600px (`PREVIEW_SIZE`) แล้วขยายตามขนาด export
-- มีโลโก้ → ตั้ง error correction เป็น `H` อัตโนมัติ, โลโก้ ≤ 500 KB เก็บเป็น data URL ใน style
+- มีโลโก้ → ตั้ง error correction เป็น `H` อัตโนมัติ; ไฟล์ใหญ่ไม่ปฏิเสธ แต่ `utils/logoImage.js` ย่อเหลือด้านยาว ≤ 1024px และ ≤ 500 KB (PNG → WEBP) แล้วเก็บเป็น data URL ใน style
 - **โหมดทดสอบ (`./start.sh 3`)**: Client ใช้ token ปลอม (`VITE_SSO_BYPASS`, ตัดทิ้งใน production build),
   API ยอมรับเฉพาะเมื่อ Development + `Sso:DevBypass=true` + request จาก localhost — **ห้ามตั้ง `Sso:DevBypass` ใน appsettings ที่ commit**
 - **เรียก `qr-code-styling` ผ่าน `qrRenderer.js` เท่านั้น** — ห้าม import ไลบรารีตรงในไฟล์อื่น (เปลี่ยนไลบรารีได้ที่จุดเดียว)

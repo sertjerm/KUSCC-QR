@@ -1,7 +1,7 @@
 // File: Client/src/modules/designer/utils/qrStyle.js
-// Version: 1.1.0
+// Version: 1.2.0
 // Description: ค่า style เริ่มต้น (รูปแบบ options ของ qr-code-styling), แปลงเป็น options สำหรับ render/export,
-//              ตรวจ contrast สี และ helper อ่านไฟล์โลโก้
+//              ตรวจ contrast สี (การเตรียมโลโก้อยู่ที่ logoImage.js)
 
 // style = options ของ qr-code-styling ยกเว้น data/width/height (บันทึกลง DB เป็น style_json)
 export const DEFAULT_STYLE = {
@@ -93,14 +93,3 @@ export const getScanWarnings = (style) => {
   }
   return warnings
 }
-
-export const MAX_LOGO_BYTES = 500 * 1024
-
-export const fileToDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-

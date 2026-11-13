@@ -1,6 +1,6 @@
 #!/bin/bash
 # File: build_prod.sh
-# Version: 1.0.0
+# Version: 1.0.1
 # Description: Build production ของ KUSCC-QR แล้ว deploy ผ่าน FTP (ตาม pattern ของ KUSCC-CENTER)
 #   https://apps4.coop.ku.ac.th/kuscc-qr/         → redirect ไป /client/ (คง query string ของ SSO)
 #   https://apps4.coop.ku.ac.th/kuscc-qr/client/  → React (Vite build)
@@ -57,7 +57,8 @@ echo ""
 echo "[1/2] Building Client (base: $CLIENT_BASE_PATH)..."
 cd "$CLIENT_DIR" || exit 1
 [ -d node_modules ] || npm install
-rm -rf dist node_modules/.vite
+# ไม่ลบ node_modules/.vite — เป็น cache ของ dev server (vite build ไม่ใช้) ลบแล้ว ./start.sh ที่รันอยู่จะหน้าว่าง
+rm -rf dist
 # ไม่ส่ง VITE_SSO_BYPASS — และ production build ตัดโค้ดโหมดทดสอบทิ้งอยู่แล้ว
 if ! env -u VITE_SSO_BYPASS NODE_ENV=production npm run build -- --base="$CLIENT_BASE_PATH"; then
     echo "Error: Client build failed!"

@@ -1,9 +1,9 @@
 // File: Client/src/modules/designer/components/StylePanel.jsx
-// Version: 1.1.0
+// Version: 1.2.0
 // Description: แผงตกแต่ง QR — Brand preset, ข้อความเหนือ/ใต้ QR, รูปทรง/สีจุด (รองรับไล่สี), มุม, พื้นหลัง, โลโก้ และค่าขั้นสูง
 import { App, Button, Col, Collapse, ColorPicker, Empty, Form, Input, Row, Select, Slider, Switch, Upload } from 'antd'
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons'
-import { fileToDataUrl, MAX_LOGO_BYTES } from '../utils/qrStyle.js'
+import { LogoError, prepareLogo } from '../utils/logoImage.js'
 
 const toOptions = (items = []) => items.map((i) => ({ value: i.value, label: i.label }))
 const toHex = (color) => (typeof color === 'string' ? color : color.toHexString())
@@ -40,14 +40,17 @@ const StylePanel = ({ style, lookups, presets, onChange, onApplyPreset }) => {
   const isTransparent = style.backgroundOptions?.color === 'transparent'
 
   const handleLogo = async (file) => {
-    if (!file.type.startsWith('image/')) {
-      message.error('รองรับเฉพาะไฟล์รูปภาพ')
-    } else if (file.size > MAX_LOGO_BYTES) {
-      message.error('โลโก้ต้องมีขนาดไม่เกิน 500 KB')
-    } else {
-      const dataUrl = await fileToDataUrl(file)
+    try {
+      // ไฟล์ใหญ่ → ย่อ/บีบอัดอัตโนมัติ ไม่ปฏิเสธผู้ใช้
+      const logo = await prepareLogo(file)
       // มีโลโก้ → บังคับระดับแก้ผิด H เพื่อให้ยังสแกนได้
-      onChange({ ...style, image: dataUrl, qrOptions: { ...style.qrOptions, errorCorrectionLevel: 'H' } })
+      onChange({ ...style, image: logo.dataUrl, qrOptions: { ...style.qrOptions, errorCorrectionLevel: 'H' } })
+      if (logo.resized) {
+        const kb = (bytes) => `${Math.round(bytes / 1024).toLocaleString()} KB`
+        message.info(`ย่อโลโก้อัตโนมัติ ${kb(logo.originalBytes)} → ${kb(logo.finalBytes)} (${logo.width}×${logo.height}px)`)
+      }
+    } catch (error) {
+      message.error(error instanceof LogoError ? error.message : 'ใส่โลโก้ไม่สำเร็จ')
     }
     return false
   }
